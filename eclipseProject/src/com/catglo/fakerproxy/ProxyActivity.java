@@ -7,13 +7,12 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.http.HttpRequest;
-
-import android.os.Bundle;
 import android.app.Activity;
+import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 
@@ -30,6 +29,8 @@ public class ProxyActivity extends Activity {
 	static final Pattern httpHeaderEndPattern            = Pattern.compile("\r\n\r\n");
 	static final Pattern httpRequestFieldAndValuePattern = Pattern.compile("(.*?):(.*?)\r\n");
 	static final Pattern statusLineEndpointPattern       = Pattern.compile("[GETPOSUDL]{3,6}\\s([\\w_\\-\\&\\?\\/\\\\\\:\\%\\(\\)\\$\\#\\!\\^\\*\\@\\.\\,<>]+)");
+	
+	HashMap<String,String> fakeApis = new HashMap<String,String>();
 	
 	
 	protected static final String LOG_TAG = "PROXY";
@@ -49,6 +50,14 @@ public class ProxyActivity extends Activity {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
+
+		
+//		fakeApis.put("/api/tap/rewards", "rewards.json");
+//		fakeApis.put("/api/tap/rewards?redeemed=true", "rewards.json");
+//		fakeApis.put("/api/tap/rewards?redeemed=false", "rewards.json");		
+		fakeApis.put("/services/customers/me/profile?fields","rewards.json");
+		
+	
 		
 		proxyThread = new Thread(new Runnable(){public void run() {
 			try {
@@ -84,17 +93,13 @@ public class ProxyActivity extends Activity {
 							bytesRead = localhostRelayInputStream.read(buffer,totalBytesRead,httpHeaderPrebufferSize-totalBytesRead);
 							totalBytesRead+=bytesRead;	
 							myDebug = new String(buffer,0,totalBytesRead);
-							Log.i("RAW",myDebug);
-							Log.i("RAW","totalBytesRead="+totalBytesRead);
 							m = httpHeaderEndPattern.matcher(myDebug);
 							if (m.find()){
 								httpHeaderPrebufferSize=totalBytesRead;
-								Log.i(LOG_TAG,"FOUND end of HTTP headers"+totalBytesRead);
 								break;
 							}
 						}
 					}
-					Log.i("RAW","httpHeaderPrebufferSize="+httpHeaderPrebufferSize);
 					
 					
 					//Parse the status line out of the header
@@ -116,6 +121,36 @@ public class ProxyActivity extends Activity {
 					}
 					
 					Log.i(LOG_TAG,"Endpoint:"+endpoint);
+					
+					if (fakeApis.containsKey(endpoint)){
+						Log.i(LOG_TAG,"INTERCEPT "+endpoint);
+						
+						String fileName = fakeApis.get(endpoint);
+						
+						InputStream fakeJsonInputStream=null;
+						byte[] buffer = new byte[2048];
+						bytesRead=0;
+						
+						try {
+							fakeJsonInputStream=getAssets().open(fileName);
+						    
+							while (fakeJsonInputStream.available()>0){
+								bytesRead = fakeJsonInputStream.available();
+								if (bytesRead>2048){
+									bytesRead=2048;
+								}
+								
+								fakeJsonInputStream.read(buffer, 0, bytesRead);
+								localhostRelayOutputStream.write(buffer, 0, bytesRead);
+							}
+							
+						} catch (IOException e) {
+						    e.printStackTrace();
+						} 
+						continue;
+					}
+					
+					
 					
 					//Get the HTTP headers in to an array
 					int currentHeaderIndex = -1;
