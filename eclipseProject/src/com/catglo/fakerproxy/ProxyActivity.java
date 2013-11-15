@@ -23,7 +23,7 @@ public class ProxyActivity extends Activity {
 	public static final int API_PORT = 80;
 	public static final int LOCALHOST_RELAY_PORT=8081;
 	public static final int maxBufferSizeForAudioProxy = 256;
-	public static final int MAX_HTTP_HEADER_SIZE = 512;
+	public static final int MAX_HTTP_HEADER_SIZE = 2048;
 	public static final int MAX_HTTP_HEADERS = 40;
 	public static final boolean CONTINUE_SENDING_AFTER_REQUEST = false;
 	
@@ -63,7 +63,7 @@ public class ProxyActivity extends Activity {
 					if (localhostConnection == null) {
 						continue;
 					}
-					Log.d(LOG_TAG, "client connected");
+					Log.d(LOG_TAG, "FOUND client connected");
 			
 					socketApiHost = new Socket(API_HOST,API_PORT);
 					InputStream apiServerInputStream = socketApiHost.getInputStream();
@@ -84,14 +84,18 @@ public class ProxyActivity extends Activity {
 							bytesRead = localhostRelayInputStream.read(buffer,totalBytesRead,httpHeaderPrebufferSize-totalBytesRead);
 							totalBytesRead+=bytesRead;	
 							myDebug = new String(buffer,0,totalBytesRead);
+							Log.i("RAW",myDebug);
+							Log.i("RAW","totalBytesRead="+totalBytesRead);
 							m = httpHeaderEndPattern.matcher(myDebug);
 							if (m.find()){
 								httpHeaderPrebufferSize=totalBytesRead;
+								Log.i(LOG_TAG,"FOUND end of HTTP headers"+totalBytesRead);
 								break;
 							}
 						}
 					}
-				
+					Log.i("RAW","httpHeaderPrebufferSize="+httpHeaderPrebufferSize);
+					
 					
 					//Parse the status line out of the header
 					int statusLineBufferIndex;
@@ -131,6 +135,7 @@ public class ProxyActivity extends Activity {
 					 
 					//Here we have a chance to intercept the http headers in case we need to tweak something
 					for (int i = 0; i < currentHeaderIndex; i++){	
+						Log.i(LOG_TAG,"Request Header:"+headers[i]);
 						//if (headers[i].contains("Content-Type")){
 						//}
 					}
@@ -150,40 +155,43 @@ public class ProxyActivity extends Activity {
 					}
 					apiServerOutputStream.write("\r\n".getBytes());
 					
-					//Write the remaining bits of data we pulled in the header buffer
-					apiServerOutputStream.write(buffer,statusLineBufferIndex,numberOfBytesInBufferAfterHeaderBytes);
-					
-					int zombiCount=0;
-			        boolean keepGoing=true;
-					while (keepGoing && zombiCount<1000)
-					{
-			        	//To make sure that the thread does not spin endlessly doing nothing but eating battery and cpu
-			        	//we keep a counter to end the thread if its not doing anything 
-			        	zombiCount++;
-						while ((bytesRead = apiServerInputStream.available())>0 && keepGoing){ 
-							
-							//The http spec does not have the client sending bits to the server after the initial request, but maybe we want to anyhow
-							if (CONTINUE_SENDING_AFTER_REQUEST) {
-								int len;
-								if ((len = localhostRelayInputStream.available())>0){
-									byte[] buf = new byte[len];
-									localhostRelayInputStream.read(buf);
-									apiServerOutputStream.write(buf);
+					if (numberOfBytesInBufferAfterHeaderBytes>0){
+						//Write the remaining bits of data we pulled in the header buffer
+						apiServerOutputStream.write(buffer,statusLineBufferIndex,numberOfBytesInBufferAfterHeaderBytes);
+						
+						int zombiCount=0;
+				        boolean keepGoing=true;
+						while (keepGoing && zombiCount<1000)
+						{
+				        	//To make sure that the thread does not spin endlessly doing nothing but eating battery and cpu
+				        	//we keep a counter to end the thread if its not doing anything 
+				        	zombiCount++;
+							while ((bytesRead = apiServerInputStream.available())>0 && keepGoing){ 
+								
+								//The http spec does not have the client sending bits to the server after the initial request, but maybe we want to anyhow
+								if (CONTINUE_SENDING_AFTER_REQUEST) {
+									int len;
+									if ((len = localhostRelayInputStream.available())>0){
+										byte[] buf = new byte[len];
+										localhostRelayInputStream.read(buf);
+										apiServerOutputStream.write(buf);
+									}
 								}
+								zombiCount=0;
+								
+								//clip the bytes read to our max chunk size
+								if (bytesRead>maxBufferSizeForAudioProxy){
+									bytesRead=maxBufferSizeForAudioProxy;
+								}
+								apiServerInputStream.read(buffer,0,bytesRead);
+								
+								localhostRelayOutputStream.write(buffer,0,bytesRead);
+						
+								Log.i(LOG_TAG,"Relayed "+bytesRead+" bytes");
+								
 							}
-							zombiCount=0;
-							
-							//clip the bytes read to our max chunk size
-							if (bytesRead>maxBufferSizeForAudioProxy){
-								bytesRead=maxBufferSizeForAudioProxy;
-							}
-							apiServerInputStream.read(buffer,0,bytesRead);
-							
-							localhostRelayOutputStream.write(buffer,0,bytesRead);
-					
-						}
-					}// End while 
-				
+						}// End while 
+					}				
 				} while(Thread.interrupted()==false);
 				
 			} catch (UnknownHostException e) {
