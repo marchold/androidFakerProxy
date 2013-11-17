@@ -97,6 +97,7 @@ public class HttpProxy extends HashMap<String,String> {
 					if (localhostConnection == null) {
 						continue;
 					}
+					setStatus("processing");
 					log("client connected:"+counter);
 			
 					
@@ -269,9 +270,8 @@ public class HttpProxy extends HashMap<String,String> {
 							}
 							localhostRelayOutputStream.write(buffer,0,bytesRead);
 					
-							
-							
 						}
+						setStatus("spinning");
 						Thread.sleep(20);
 
 					}// End while 
@@ -297,11 +297,12 @@ public class HttpProxy extends HashMap<String,String> {
 
 	
 	/**
-	 * HttpProxy will route through localhost and intercept packets to end points listed in the faheApis 
+	 * HttpProxy will route through localhost and intercept packets to end points listed as its map keys. 
+	 * To intercept an end point call .add(ENDPOINT,FILE_TO_SERVE). 
+	 *  
 	 * @param localhostRelayPort   The port which the app will connect to the proxy over 
 	 * @param apiServerHostName    The host name of the real API server
 	 * @param apiServerPort        The port to talk to the real API server on
-	 * @param fakeApis             A has map of key:[End Point] <--> value:[Fake Response File]
 	 */
 	public HttpProxy(final AssetManager assetManager
 					,final int    localhostRelayPort
