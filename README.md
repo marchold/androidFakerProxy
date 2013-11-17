@@ -15,7 +15,7 @@ assets folder. When those encpoints are accessed the file is returned and no ser
 
 For example:
 
-                final HttpProxy proxy = new HttpProxy(getAssets()
+        final HttpProxy proxy = new HttpProxy(getAssets()
 				                            ,8083
 				                            ,"google.com"
 				                            ,80);
