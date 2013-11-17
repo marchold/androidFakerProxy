@@ -14,7 +14,8 @@ class is derrived from a Map<string,string>. The key is the endpoint the value i
 assets folder. When those encpoints are accessed the file is returned and no server interaction takes place.
 
 For example:
-    final HttpProxy proxy = new HttpProxy(getAssets()
+
+                final HttpProxy proxy = new HttpProxy(getAssets()
 				                            ,8083
 				                            ,"google.com"
 				                            ,80);
