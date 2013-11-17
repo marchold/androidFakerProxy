@@ -9,9 +9,66 @@
     tools:context=".ProxyActivity" >
 
     <TextView
+        android:id="@+id/textView1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:id="@+id/statusText"
-        android:text="@string/hello_world" />
+        android:layout_alignParentTop="true"
+        android:text="Logging"
+        android:textAppearance="?android:attr/textAppearanceMedium" />
+
+   
+
+    <ToggleButton
+        android:id="@+id/enableLoggingToggle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignRight="@+id/textView1"
+        android:layout_below="@+id/textView1" />
+    
+    
+      <TextView
+        android:id="@+id/textView2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:text="API Faking"
+        android:textAppearance="?android:attr/textAppearanceMedium" />
+
+   
+      
+      
+      
+
+    <ToggleButton
+        android:id="@+id/enablInterceptToggle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignRight="@+id/textView2"
+        android:layout_below="@+id/textView1" />
+
+     <ScrollView
+         android:id="@+id/scrollView1"
+         android:layout_width="match_parent"
+         android:layout_height="wrap_content"
+         android:layout_alignParentBottom="true"
+         android:layout_alignParentLeft="true"
+         android:layout_below="@+id/enableLoggingToggle" >
+
+         <LinearLayout
+             android:id="@+id/historyLayout"
+             android:layout_width="match_parent"
+             android:layout_height="match_parent"
+             android:orientation="vertical" >
+
+         </LinearLayout>
+     </ScrollView>
+
+     <TextView
+         android:id="@+id/statusText"
+         android:layout_width="wrap_content"
+         android:layout_height="wrap_content"
+         android:layout_below="@+id/textView2"
+         android:layout_centerHorizontal="true"
+         android:text="@string/hello_world" />
 
 </RelativeLayout>
