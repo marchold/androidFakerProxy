@@ -1,5 +1,8 @@
 package com.catglo.fakerproxy;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -12,6 +15,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import android.content.res.AssetManager;
+import android.os.Environment;
 import android.util.Log;
 
 public class HttpProxy  {
@@ -23,6 +27,11 @@ public class HttpProxy  {
 	protected static final String LOG_TAG = "PROXY";
 	static int httpHeaderPrebufferSize = MAX_HTTP_HEADER_SIZE;
 	
+	private AssetManager assetManager;
+	private int localhostRelayPort;
+	private String apiServerHostName;
+	private int apiServerPort;
+	private HashMap<String, String> fakeApis;
 	
 	static final Pattern httpHeaderEndPattern            = Pattern.compile("\r\n\r\n");
 	static final Pattern httpRequestFieldAndValuePattern = Pattern.compile("(.*?):(.*?)\r\n");
@@ -53,6 +62,7 @@ public class HttpProxy  {
 		if (logger!=null){
 			logger.log(log);
 		}
+		Log.i("PROXY",log);
 	}
 	
 	public boolean enableLogging=true;
@@ -77,14 +87,16 @@ public class HttpProxy  {
 				port = localhostListeningSocket.getLocalPort();
 				setStatus("port " + port + " obtained");
 			
+				int counter =0;
 				do {
+					counter++;
 					setStatus("server listening");
 					
 					Socket localhostConnection = localhostListeningSocket.accept();
 					if (localhostConnection == null) {
 						continue;
 					}
-					setStatus("client connected");
+					log("client connected:"+counter);
 			
 					socketApiHost = new Socket(apiServerHostName,apiServerPort);
 					InputStream apiServerInputStream = socketApiHost.getInputStream();
@@ -93,6 +105,7 @@ public class HttpProxy  {
 					InputStream localhostRelayInputStream = localhostConnection.getInputStream();
 					OutputStream localhostRelayOutputStream = localhostConnection.getOutputStream();
 		
+					log("read request header");
 					
 					//Read in the HTTP header so we can determine if we need to handle the request ourselves
 					int totalBytesRead=0;
@@ -101,8 +114,13 @@ public class HttpProxy  {
 					while (totalBytesRead<httpHeaderPrebufferSize){
 						if (localhostRelayInputStream.available()>0){ 
 							
+							int bytesToRead = httpHeaderPrebufferSize-totalBytesRead;
+							int avalableBytes = localhostRelayInputStream.available();
+							if (bytesToRead > avalableBytes){
+								bytesToRead = avalableBytes;
+							}
 							//get back the data
-							bytesRead = localhostRelayInputStream.read(buffer,totalBytesRead,httpHeaderPrebufferSize-totalBytesRead);
+							bytesRead = localhostRelayInputStream.read(buffer,totalBytesRead,bytesToRead);
 							totalBytesRead+=bytesRead;	
 							myDebug = new String(buffer,0,totalBytesRead);
 							m = httpHeaderEndPattern.matcher(myDebug);
@@ -112,6 +130,8 @@ public class HttpProxy  {
 							}
 						}
 					}
+					
+					log("parse status line");
 					
 					
 					//Parse the status line out of the header
@@ -131,6 +151,21 @@ public class HttpProxy  {
 						endpoint = m.group(1);
 					}
 					
+					FileOutputStream apiDataLogger=null;  
+			        
+					if (enableLogging){
+						try {
+							if (endpoint.equalsIgnoreCase(".") || endpoint.equalsIgnoreCase("/")){
+								endpoint="ROOT";
+							}
+							String endpointFile = endpoint.replace("/", ".");
+							File sdCard = Environment.getExternalStorageDirectory();
+							File file = new File(sdCard.getAbsolutePath(), endpointFile);
+							apiDataLogger = new FileOutputStream(file);   
+						} catch (FileNotFoundException e) {
+							log("failed to open log");
+						}
+					}
 					
 					if (enableIntercept && fakeApis.containsKey(endpoint)){
 						log("Intercept:"+endpoint);
@@ -179,9 +214,10 @@ public class HttpProxy  {
 					 
 					//Here we have a chance to intercept the http headers in case we need to tweak something
 					for (int i = 0; i < currentHeaderIndex; i++){	
-						//Log.i(LOG_TAG,"Request Header:"+headers[i]);
-						//if (headers[i].contains("Content-Type")){
-						//}
+						if (headers[i].contains("Host")){
+							headers[i] = "Host: "+apiServerHostName+":"+apiServerPort+"\r\n";
+							log("modified"+headers[i]);
+						}
 					}
 					
 					int numberOfBytesInBufferAfterHeaderBytes = httpHeaderPrebufferSize-statusLineBufferIndex;
@@ -199,49 +235,59 @@ public class HttpProxy  {
 					}
 					apiServerOutputStream.write("\r\n".getBytes());
 					
-					if (numberOfBytesInBufferAfterHeaderBytes>0){
-						//Write the remaining bits of data we pulled in the header buffer
-						apiServerOutputStream.write(buffer,statusLineBufferIndex,numberOfBytesInBufferAfterHeaderBytes);
-						
-						int zombiCount=0;
-				        boolean keepGoing=true;
-						while (keepGoing && zombiCount<1000)
-						{
-				        	//To make sure that the thread does not spin endlessly doing nothing but eating battery and cpu
-				        	//we keep a counter to end the thread if its not doing anything 
-				        	zombiCount++;
-							while ((bytesRead = apiServerInputStream.available())>0 && keepGoing){ 
-								
-								//The http spec does not have the client sending bits to the server after the initial request, but maybe we want to anyhow
-								if (CONTINUE_SENDING_AFTER_REQUEST) {
-									int len;
-									if ((len = localhostRelayInputStream.available())>0){
-										byte[] buf = new byte[len];
-										localhostRelayInputStream.read(buf);
-										apiServerOutputStream.write(buf);
-									}
+					
+					//Write the remaining bits of data we pulled in the header buffer
+					apiServerOutputStream.write(buffer,statusLineBufferIndex,numberOfBytesInBufferAfterHeaderBytes);
+					
+					int zombiCount=0;
+			        boolean keepGoing=true;
+					while (keepGoing && zombiCount<20)
+					{
+			        	//To make sure that the thread does not spin endlessly doing nothing but eating battery and cpu
+			        	//we keep a counter to end the thread if its not doing anything 
+			        	zombiCount++;
+						while ((bytesRead = apiServerInputStream.available())>0 && keepGoing){ 
+							
+							//The http spec does not have the client sending bits to the server after the initial request, but maybe we want to anyhow
+							if (CONTINUE_SENDING_AFTER_REQUEST) {
+								int len;
+								if ((len = localhostRelayInputStream.available())>0){
+									byte[] buf = new byte[len];
+									localhostRelayInputStream.read(buf);
+									apiServerOutputStream.write(buf);
 								}
-								zombiCount=0;
-								
-								//clip the bytes read to our max chunk size
-								if (bytesRead>maxBufferSizeForProxy){
-									bytesRead=maxBufferSizeForProxy;
-								}
-								apiServerInputStream.read(buffer,0,bytesRead);
-								
-								localhostRelayOutputStream.write(buffer,0,bytesRead);
-						
-								setStatus("Relayed "+bytesRead+" bytes");
-								
 							}
-						}// End while 
-					}				
+							zombiCount=0;
+							
+							//clip the bytes read to our max chunk size
+							if (bytesRead>maxBufferSizeForProxy){
+								bytesRead=maxBufferSizeForProxy;
+							}
+							apiServerInputStream.read(buffer,0,bytesRead);
+							
+							if (apiDataLogger!=null){
+								apiDataLogger.write(buffer,0,bytesRead);
+							}
+							localhostRelayOutputStream.write(buffer,0,bytesRead);
+					
+							
+							
+						}
+						Thread.sleep(20);
+
+					}// End while 
+					if (apiDataLogger!=null){
+						apiDataLogger.close();
+					}
 				} while(Thread.interrupted()==false);
 				
 			} catch (UnknownHostException e) {
 				Log.e(LOG_TAG, "Error initializing server", e);
 			} catch (IOException e) {
 				Log.e(LOG_TAG, "Error initializing server", e);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}		
 		}};
 		Thread thread = new Thread(runnable);
@@ -249,11 +295,7 @@ public class HttpProxy  {
 	}
 	
 	
-	private AssetManager assetManager;
-	private int localhostRelayPort;
-	private String apiServerHostName;
-	private int apiServerPort;
-	private HashMap<String, String> fakeApis;
+
 	
 	/**
 	 * HttpProxy will route through localhost and intercept packets to end points listed in the faheApis 
