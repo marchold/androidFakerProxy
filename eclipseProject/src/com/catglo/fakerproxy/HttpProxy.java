@@ -18,8 +18,9 @@ import android.content.res.AssetManager;
 import android.os.Environment;
 import android.util.Log;
 
-public class HttpProxy  {
-	
+public class HttpProxy extends HashMap<String,String> {
+
+	private static final long serialVersionUID = 1L;
 	public static final int maxBufferSizeForProxy = 256;
 	public static final int MAX_HTTP_HEADER_SIZE = 2048;
 	public static final int MAX_HTTP_HEADERS = 40;
@@ -31,7 +32,6 @@ public class HttpProxy  {
 	private int localhostRelayPort;
 	private String apiServerHostName;
 	private int apiServerPort;
-	private HashMap<String, String> fakeApis;
 	
 	static final Pattern httpHeaderEndPattern            = Pattern.compile("\r\n\r\n");
 	static final Pattern httpRequestFieldAndValuePattern = Pattern.compile("(.*?):(.*?)\r\n");
@@ -98,9 +98,6 @@ public class HttpProxy  {
 					}
 					log("client connected:"+counter);
 			
-					socketApiHost = new Socket(apiServerHostName,apiServerPort);
-					InputStream apiServerInputStream = socketApiHost.getInputStream();
-					OutputStream apiServerOutputStream = socketApiHost.getOutputStream();
 					
 					InputStream localhostRelayInputStream = localhostConnection.getInputStream();
 					OutputStream localhostRelayOutputStream = localhostConnection.getOutputStream();
@@ -167,10 +164,10 @@ public class HttpProxy  {
 						}
 					}
 					
-					if (enableIntercept && fakeApis.containsKey(endpoint)){
+					if (enableIntercept && containsKey(endpoint)){
 						log("Intercept:"+endpoint);
 						
-						String fileName = fakeApis.get(endpoint);
+						String fileName = get(endpoint);
 						
 						InputStream fakeJsonInputStream=null;
 						bytesRead=0;
@@ -225,6 +222,9 @@ public class HttpProxy  {
 					//
 					// At this point we are done reading the request and its time to forward it to the real API server
 					//
+					socketApiHost = new Socket(apiServerHostName,apiServerPort);
+					InputStream apiServerInputStream = socketApiHost.getInputStream();
+					OutputStream apiServerOutputStream = socketApiHost.getOutputStream();
 					
 					//Write the HTTP status line to the api server socket
 					apiServerOutputStream.write(statusLine.getBytes());
@@ -308,14 +308,12 @@ public class HttpProxy  {
 					,final int    localhostRelayPort
 					,final String apiServerHostName
 					,final int    apiServerPort
-			        ,final HashMap<String,String> fakeApis
 			        ) 
 	{
 		this.assetManager=assetManager;
 		this.localhostRelayPort=localhostRelayPort;
 		this.apiServerHostName=apiServerHostName;
 		this.apiServerPort=apiServerPort;
-		this.fakeApis=fakeApis;
 	}
 	
 	
