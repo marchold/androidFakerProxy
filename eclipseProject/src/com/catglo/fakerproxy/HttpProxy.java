@@ -21,12 +21,12 @@ import android.util.Log;
 public class HttpProxy extends HashMap<String,String> {
 
 	private static final long serialVersionUID = 1L;
-	public static final int maxBufferSizeForProxy = 256;
-	public static final int MAX_HTTP_HEADER_SIZE = 2048;
-	public static final int MAX_HTTP_HEADERS = 40;
-	public static final boolean CONTINUE_SENDING_AFTER_REQUEST = false;
-	protected static final String LOG_TAG = "PROXY";
-	static int httpHeaderPrebufferSize = MAX_HTTP_HEADER_SIZE;
+	private static final int maxBufferSizeForProxy = 256;
+	private static final int MAX_HTTP_HEADER_SIZE = 2048;
+	private static final int MAX_HTTP_HEADERS = 40;
+	private static final boolean CONTINUE_SENDING_AFTER_REQUEST = false;
+	private static final String LOG_TAG = "PROXY";
+	
 	
 	private AssetManager assetManager;
 	private int localhostRelayPort;
@@ -71,6 +71,7 @@ public class HttpProxy extends HashMap<String,String> {
 	public void start(){
 		Runnable runnable = new Runnable(){public void run() {
 			try {
+				int httpHeaderPrebufferSize = MAX_HTTP_HEADER_SIZE;
 				
 				StringBuilder headerBuilderBuffer = new StringBuilder(httpHeaderPrebufferSize);
 				byte[] buffer = new byte[Math.max(maxBufferSizeForProxy,httpHeaderPrebufferSize)];		
@@ -102,7 +103,6 @@ public class HttpProxy extends HashMap<String,String> {
 					InputStream localhostRelayInputStream = localhostConnection.getInputStream();
 					OutputStream localhostRelayOutputStream = localhostConnection.getOutputStream();
 		
-					log("read request header");
 					
 					//Read in the HTTP header so we can determine if we need to handle the request ourselves
 					int totalBytesRead=0;
@@ -128,7 +128,6 @@ public class HttpProxy extends HashMap<String,String> {
 						}
 					}
 					
-					log("parse status line");
 					
 					
 					//Parse the status line out of the header
@@ -160,7 +159,7 @@ public class HttpProxy extends HashMap<String,String> {
 							File file = new File(sdCard.getAbsolutePath(), endpointFile);
 							apiDataLogger = new FileOutputStream(file);   
 						} catch (FileNotFoundException e) {
-							log("failed to open log");
+							Log.e("FAKER PROXY","failed to open log");
 						}
 					}
 					
