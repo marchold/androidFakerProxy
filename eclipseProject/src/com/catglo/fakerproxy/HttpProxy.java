@@ -98,8 +98,7 @@ public class HttpProxy extends HashMap<String,String> {
 						continue;
 					}
 					setStatus("processing");
-					log("client connected:"+counter);
-			
+					
 					
 					InputStream localhostRelayInputStream = localhostConnection.getInputStream();
 					OutputStream localhostRelayOutputStream = localhostConnection.getOutputStream();
@@ -160,7 +159,6 @@ public class HttpProxy extends HashMap<String,String> {
 							File file = new File(sdCard.getAbsolutePath(), endpointFile);
 							apiDataLogger = new FileOutputStream(file);   
 							
-							log("Logging "+file.toString());
 							
 						} catch (FileNotFoundException e) {
 							Log.e("FAKER PROXY","failed to open log");
@@ -168,7 +166,7 @@ public class HttpProxy extends HashMap<String,String> {
 					}
 					
 					if (enableIntercept && containsKey(endpoint)){
-						log("Intercept:"+endpoint);
+						log(counter+",Intercept:"+endpoint);
 						
 						String fileName = get(endpoint);
 						
@@ -193,7 +191,7 @@ public class HttpProxy extends HashMap<String,String> {
 						} 
 						continue;
 					} 
-					log("Forward:"+endpoint);
+					log(counter+",Forward:"+endpoint);
 					
 					
 					//Get the HTTP headers in to an array
@@ -216,7 +214,6 @@ public class HttpProxy extends HashMap<String,String> {
 					for (int i = 0; i < currentHeaderIndex; i++){	
 						if (headers[i].contains("Host")){
 							headers[i] = "Host: "+apiServerHostName+":"+apiServerPort+"\r\n";
-							log("modified"+headers[i]);
 						}
 					}
 					

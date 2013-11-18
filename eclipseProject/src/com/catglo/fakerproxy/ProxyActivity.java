@@ -27,7 +27,7 @@ import android.widget.ToggleButton;
 
 public class ProxyActivity extends Activity {
 	
-	public static final int LOCALHOST_RELAY_PORT=8083;
+	public static final int LOCALHOST_RELAY_PORT=8085;
 	public static final String API_HOST = "oep04-d.samsmk.com";
 	public static final int API_PORT = 80;
 	public static final int MAX_DEVICE_ON_SCREEN_HISTORY_LIST=30;
@@ -50,7 +50,8 @@ public class ProxyActivity extends Activity {
 				                            ,API_HOST
 				                            ,API_PORT);
 
-		proxy.put("/services/customers/me/profile?fields", "profile.txt");
+		proxy.put("/services/api/tap/rewards", "rewards.txt");
+		proxy.put("/services/api/tap/events", "allevents.txt");
 		
 		statusText = (TextView)findViewById(R.id.statusText);
 		proxy.setProxyStatusListener(new ProxyStatusListener(){public void statusChanged(final String newStatus) {
