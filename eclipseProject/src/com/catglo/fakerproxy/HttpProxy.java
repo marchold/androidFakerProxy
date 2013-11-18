@@ -155,10 +155,13 @@ public class HttpProxy extends HashMap<String,String> {
 							if (endpoint.equalsIgnoreCase(".") || endpoint.equalsIgnoreCase("/")){
 								endpoint="ROOT";
 							}
-							String endpointFile = endpoint.replace("/", ".");
+							String endpointFile = endpoint.replace("/", "_").replace("?", ".");
 							File sdCard = Environment.getExternalStorageDirectory();
 							File file = new File(sdCard.getAbsolutePath(), endpointFile);
 							apiDataLogger = new FileOutputStream(file);   
+							
+							log("Logging "+file.toString());
+							
 						} catch (FileNotFoundException e) {
 							Log.e("FAKER PROXY","failed to open log");
 						}
@@ -237,7 +240,9 @@ public class HttpProxy extends HashMap<String,String> {
 					
 					
 					//Write the remaining bits of data we pulled in the header buffer
-					apiServerOutputStream.write(buffer,statusLineBufferIndex,numberOfBytesInBufferAfterHeaderBytes);
+					if (numberOfBytesInBufferAfterHeaderBytes>0){
+						apiServerOutputStream.write(buffer,statusLineBufferIndex,numberOfBytesInBufferAfterHeaderBytes);
+					}
 					
 					int zombiCount=0;
 			        boolean keepGoing=true;

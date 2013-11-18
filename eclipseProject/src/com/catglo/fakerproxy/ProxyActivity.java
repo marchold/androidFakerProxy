@@ -28,7 +28,7 @@ import android.widget.ToggleButton;
 public class ProxyActivity extends Activity {
 	
 	public static final int LOCALHOST_RELAY_PORT=8083;
-	public static final String API_HOST = "google.com";
+	public static final String API_HOST = "oep04-d.samsmk.com";
 	public static final int API_PORT = 80;
 	public static final int MAX_DEVICE_ON_SCREEN_HISTORY_LIST=30;
 	
@@ -45,17 +45,12 @@ public class ProxyActivity extends Activity {
 		setContentView(R.layout.activity_main);
 
 		
-//		fakeApis
-//		fakeApis.put("/api/tap/rewards?redeemed=true", "rewards.json");
-//		fakeApis.put("/api/tap/rewards?redeemed=false", "rewards.json");		
-	//	fakeApis.put("/services/customers/me/profile?fields","rewards.json");
-		
 		final HttpProxy proxy = new HttpProxy(getAssets()
 				                            ,LOCALHOST_RELAY_PORT
 				                            ,API_HOST
 				                            ,API_PORT);
-		
-		proxy.put("/api", "rewards.json");
+
+		proxy.put("/services/customers/me/profile?fields", "profile.txt");
 		
 		statusText = (TextView)findViewById(R.id.statusText);
 		proxy.setProxyStatusListener(new ProxyStatusListener(){public void statusChanged(final String newStatus) {
