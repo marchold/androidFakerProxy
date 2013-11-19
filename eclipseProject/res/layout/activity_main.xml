@@ -67,8 +67,29 @@
          android:id="@+id/statusText"
          android:layout_width="wrap_content"
          android:layout_height="wrap_content"
-         android:layout_below="@+id/textView2"
+         android:layout_alignTop="@+id/textView2"
          android:layout_centerHorizontal="true"
          android:text="@string/hello_world" />
+
+     <EditText
+         android:id="@+id/localPort"
+         android:layout_width="wrap_content"
+         android:layout_height="wrap_content"
+         android:layout_above="@+id/scrollView1"
+         android:layout_toLeftOf="@+id/button1"
+         android:layout_toRightOf="@+id/enableLoggingToggle"
+         android:ems="10"
+         android:inputType="number" >
+
+         <requestFocus />
+     </EditText>
+
+     <Button
+         android:id="@+id/restartProxyButton"
+         android:layout_width="wrap_content"
+         android:layout_height="wrap_content"
+         android:layout_alignTop="@+id/enablInterceptToggle"
+         android:layout_toLeftOf="@+id/enablInterceptToggle"
+         android:text="Restart" />
 
 </RelativeLayout>

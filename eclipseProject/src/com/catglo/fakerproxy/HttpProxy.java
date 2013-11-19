@@ -6,6 +6,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.BindException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -50,6 +51,7 @@ public class HttpProxy extends HashMap<String,String> {
 		}
 	}
 	
+	ServerSocket localhostListeningSocket;
 	
 	interface ProxyLogListener {
 		public void log(String newStatus);
@@ -67,6 +69,18 @@ public class HttpProxy extends HashMap<String,String> {
 	
 	public boolean enableLogging=true;
 	public boolean enableIntercept=true;
+	private Thread thread;
+	
+	public void stop(){
+		try {
+			localhostListeningSocket.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		thread.interrupt();
+		start();
+	}
 	
 	public void start(){
 		Runnable runnable = new Runnable(){public void run() {
@@ -80,11 +94,18 @@ public class HttpProxy extends HashMap<String,String> {
 
 				int port=localhostRelayPort;
 				Socket socketApiHost;
-				ServerSocket localhostListeningSocket;
+
 				
 				Matcher m;
 				
-				localhostListeningSocket = new ServerSocket(port, 0, InetAddress.getByAddress(new byte[] { 127, 0, 0, 1 }));
+				try {
+					localhostListeningSocket = new ServerSocket(port, 0, InetAddress.getByAddress(new byte[] { 127, 0, 0, 1 }));
+				}
+				catch (BindException e){
+					setStatus("Failed to bind to port:"+port);
+					log("Port in use");
+					return;
+				}
 				port = localhostListeningSocket.getLocalPort();
 				setStatus("port " + port + " obtained");
 			
@@ -188,6 +209,8 @@ public class HttpProxy extends HashMap<String,String> {
 							
 						} catch (IOException e) {
 						    e.printStackTrace();
+						    log("FAIL - Please reset proxy");
+						    setStatus("CRASHED");
 						} 
 						continue;
 					} 
@@ -284,14 +307,18 @@ public class HttpProxy extends HashMap<String,String> {
 				
 			} catch (UnknownHostException e) {
 				Log.e(LOG_TAG, "Error initializing server", e);
+				log("UnknownHostException");
+				setStatus("CRASHED");
 			} catch (IOException e) {
 				Log.e(LOG_TAG, "Error initializing server", e);
+				log("IOException");
+				setStatus("CRASHED");
 			} catch (InterruptedException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}		
 		}};
-		Thread thread = new Thread(runnable);
+		thread = new Thread(runnable);
 		thread.start();
 	}
 	
