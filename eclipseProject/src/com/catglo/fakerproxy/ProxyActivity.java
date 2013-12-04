@@ -1,28 +1,12 @@
 package com.catglo.fakerproxy;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.InetAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.UnknownHostException;
-import java.util.HashMap;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import com.catglo.fakerproxy.HttpProxy.ProxyLogListener;
-import com.catglo.fakerproxy.HttpProxy.ProxyStatusListener;
-
 import android.app.Activity;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
-import android.content.res.AssetManager;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.util.Log;
 import android.view.Menu;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -34,8 +18,21 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.ToggleButton;
 
+import com.catglo.fakerproxy.HttpProxy.ProxyLogListener;
+import com.catglo.fakerproxy.HttpProxy.ProxyStatusListener;
+
 public class ProxyActivity extends Activity {
 
+	
+	void setUpMapping(){
+		proxy.put("/api/tap/rewards", "rewards.txt");
+		proxy.put("/api/tap/events", "allevents.txt");
+		proxy.put("/api/tap/events?latitude","allevents.txt");
+		proxy.put("/api/customers/me/profile?fields","profile.txt");
+		proxy.put("/api/tap/location/1?deviceId", "taptowin_redeemed-false.txt");
+		proxy.put("/api/tap/location/3?deviceId","taptowin_redeemed.txt");
+	}
+	
 	public static final String API_HOST = "oep06-d1-web.samsmk.com";
 	public static final int API_PORT = 80;
 	public static final int MAX_DEVICE_ON_SCREEN_HISTORY_LIST=30;
@@ -93,10 +90,7 @@ public class ProxyActivity extends Activity {
 				                            ,API_HOST
 				                            ,API_PORT);
 
-//		proxy.put("/services/api/tap/rewards", "rewards.txt");
-//		proxy.put("/services/api/tap/events", "allevents.txt");
-		proxy.put("/services/customers/me/profile?fields","profile.txt");
-//		proxy.put("/services/api/tap/location/1?deviceId", "taptowin.txt");
+		setUpMapping();
 		
 		
 		proxy.setProxyStatusListener(new ProxyStatusListener(){public void statusChanged(final String newStatus) {

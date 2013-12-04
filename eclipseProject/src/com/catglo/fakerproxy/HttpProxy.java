@@ -170,22 +170,6 @@ public class HttpProxy extends HashMap<String,String> {
 					
 					FileOutputStream apiDataLogger=null;  
 			        
-					if (enableLogging){
-						try {
-							if (endpoint.equalsIgnoreCase(".") || endpoint.equalsIgnoreCase("/")){
-								endpoint="ROOT";
-							}
-							String endpointFile = endpoint.replace("/", "_").replace("?", ".");
-							File sdCard = Environment.getExternalStorageDirectory();
-							File file = new File(sdCard.getAbsolutePath(), endpointFile);
-							apiDataLogger = new FileOutputStream(file);   
-							
-							
-						} catch (FileNotFoundException e) {
-							Log.e("FAKER PROXY","failed to open log");
-						}
-					}
-					
 					if (enableIntercept && containsKey(endpoint)){
 						log(counter+",Intercept:"+endpoint);
 						
@@ -237,6 +221,22 @@ public class HttpProxy extends HashMap<String,String> {
 					for (int i = 0; i < currentHeaderIndex; i++){	
 						if (headers[i].contains("Host")){
 							headers[i] = "Host: "+apiServerHostName+":"+apiServerPort+"\r\n";
+						}
+					}
+					
+					if (enableLogging){
+						try {
+							if (endpoint.equalsIgnoreCase(".") || endpoint.equalsIgnoreCase("/")){
+								endpoint="ROOT";
+							}
+							String endpointFile = endpoint.replace("/", "_").replace("?", ".");
+							File sdCard = Environment.getExternalStorageDirectory();
+							File file = new File(sdCard.getAbsolutePath(), endpointFile);
+							apiDataLogger = new FileOutputStream(file);   
+							
+							
+						} catch (FileNotFoundException e) {
+							Log.e("FAKER PROXY","failed to open log");
 						}
 					}
 					
