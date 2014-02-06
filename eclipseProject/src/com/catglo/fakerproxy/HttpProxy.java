@@ -22,10 +22,10 @@ import android.util.Log;
 public class HttpProxy extends HashMap<String,String> {
 
 	private static final long serialVersionUID = 1L;
-	private static final int maxBufferSizeForProxy = 256;
-	private static final int MAX_HTTP_HEADER_SIZE = 2048;
+	private static final int maxBufferSizeForProxy = 1024;
+	private static final int MAX_HTTP_HEADER_SIZE = 10000;
 	private static final int MAX_HTTP_HEADERS = 40;
-	private static final boolean CONTINUE_SENDING_AFTER_REQUEST = false;
+	private static final boolean CONTINUE_SENDING_AFTER_REQUEST = true;
 	private static final String LOG_TAG = "PROXY";
 	
 	
@@ -82,12 +82,13 @@ public class HttpProxy extends HashMap<String,String> {
 		start();
 	}
 	
+	static int requestCounter = 0;
+	
 	public void start(){
 		Runnable runnable = new Runnable(){public void run() {
 			try {
 				int httpHeaderPrebufferSize = MAX_HTTP_HEADER_SIZE;
 				
-				StringBuilder headerBuilderBuffer = new StringBuilder(httpHeaderPrebufferSize);
 				byte[] buffer = new byte[Math.max(maxBufferSizeForProxy,httpHeaderPrebufferSize)];		
 				byte[] headerScratchBuffer = new byte[httpHeaderPrebufferSize];
 				String headers[] = new String[MAX_HTTP_HEADERS];
@@ -125,12 +126,26 @@ public class HttpProxy extends HashMap<String,String> {
 					OutputStream localhostRelayOutputStream = localhostConnection.getOutputStream();
 		
 					
+					FileOutputStream apRequestLogger=null;  
+					
+					
+					String endpointFile = "Request"+requestCounter;
+					Log.i("Count","Request count "+requestCounter);
+					requestCounter++;
+					File sdCard = Environment.getExternalStorageDirectory();
+					File file = new File(sdCard.getAbsolutePath(), endpointFile);
+					apRequestLogger = new FileOutputStream(file);  
+					
+					
 					//Read in the HTTP header so we can determine if we need to handle the request ourselves
 					int totalBytesRead=0;
 					int bytesRead; 
 					String myDebug;
-					while (totalBytesRead<httpHeaderPrebufferSize){
-						if (localhostRelayInputStream.available()>0){ 
+				//	StringBuilder headerBuilderBuffer = new StringBuilder(httpHeaderPrebufferSize);
+					
+				//	while (totalBytesRead<httpHeaderPrebufferSize){
+				
+						while (localhostRelayInputStream.available()>0){ 
 							
 							int bytesToRead = httpHeaderPrebufferSize-totalBytesRead;
 							int avalableBytes = localhostRelayInputStream.available();
@@ -141,13 +156,23 @@ public class HttpProxy extends HashMap<String,String> {
 							bytesRead = localhostRelayInputStream.read(buffer,totalBytesRead,bytesToRead);
 							totalBytesRead+=bytesRead;	
 							myDebug = new String(buffer,0,totalBytesRead);
+							//byte[] garb = new byte[10];
+							//garb[0]= 'M';
+							//garb[1]= '\n';
+							//garb[2]= '\r';
+							//apRequestLogger.write(garb,0,3);
+							
+							apRequestLogger.write(buffer,0,totalBytesRead);
 							m = httpHeaderEndPattern.matcher(myDebug);
-							if (m.find()){
-								httpHeaderPrebufferSize=totalBytesRead;
-								break;
-							}
+							
+						//	if (m.find()){
+						//		httpHeaderPrebufferSize=totalBytesRead;
+						//		break;
+						//	}
+							Thread.sleep(10);
 						}
-					}
+			
+				//	}
 					
 					
 					
@@ -229,9 +254,9 @@ public class HttpProxy extends HashMap<String,String> {
 							if (endpoint.equalsIgnoreCase(".") || endpoint.equalsIgnoreCase("/")){
 								endpoint="ROOT";
 							}
-							String endpointFile = endpoint.replace("/", "_").replace("?", ".");
-							File sdCard = Environment.getExternalStorageDirectory();
-							File file = new File(sdCard.getAbsolutePath(), endpointFile);
+							endpointFile = endpoint.replace("/", "_").replace("?", ".");
+							sdCard = Environment.getExternalStorageDirectory();
+							file = new File(sdCard.getAbsolutePath(), endpointFile);
 							apiDataLogger = new FileOutputStream(file);   
 							
 							
@@ -280,6 +305,7 @@ public class HttpProxy extends HashMap<String,String> {
 									byte[] buf = new byte[len];
 									localhostRelayInputStream.read(buf);
 									apiServerOutputStream.write(buf);
+									apRequestLogger.write(buf,0,len);
 								}
 							}
 							zombiCount=0;
@@ -302,6 +328,9 @@ public class HttpProxy extends HashMap<String,String> {
 					}// End while 
 					if (apiDataLogger!=null){
 						apiDataLogger.close();
+					}
+					if (apRequestLogger!=null){
+						apRequestLogger.close();
 					}
 				} while(Thread.interrupted()==false);
 				

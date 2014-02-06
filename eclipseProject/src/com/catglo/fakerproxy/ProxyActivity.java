@@ -25,15 +25,15 @@ public class ProxyActivity extends Activity {
 
 	
 	void setUpMapping(){
-		proxy.put("/api/tap/rewards", "rewards.txt");
-		proxy.put("/api/tap/events", "allevents.txt");
-		proxy.put("/api/tap/events?latitude","allevents.txt");
-		proxy.put("/api/customers/me/profile?fields","profile.txt");
-		proxy.put("/api/tap/location/1?deviceId", "taptowin_redeemed-false.txt");
-		proxy.put("/api/tap/location/3?deviceId","taptowin_redeemed.txt");
+	//	proxy.put("/api/tap/rewards", "rewards.txt");
+	//	proxy.put("/api/tap/events", "allevents.txt");
+	//	proxy.put("/api/tap/events?latitude","allevents.txt");
+	//	proxy.put("/api/customers/me/profile?fields","profile.txt");
+	//	proxy.put("/api/tap/location/1?deviceId", "taptowin_redeemed-false.txt");
+	//	proxy.put("/api/tap/location/3?deviceId","taptowin_redeemed.txt");
 	}
 	
-	public static final String API_HOST = "oep06-d1-web.samsmk.com";
+	public static final String API_HOST = "oep61-d-aeg.samsmk.com";
 	public static final int API_PORT = 80;
 	public static final int MAX_DEVICE_ON_SCREEN_HISTORY_LIST=30;
 	
