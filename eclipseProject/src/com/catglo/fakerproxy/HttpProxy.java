@@ -23,7 +23,7 @@ public class HttpProxy extends HashMap<String,String> {
 
 	private static final long serialVersionUID = 1L;
 	private static final int maxBufferSizeForProxy = 1024;
-	private static final int MAX_HTTP_HEADER_SIZE = 10000;
+	private static final int MAX_HTTP_HEADER_SIZE = 25000;
 	private static final int MAX_HTTP_HEADERS = 40;
 	private static final boolean CONTINUE_SENDING_AFTER_REQUEST = true;
 	private static final String LOG_TAG = "PROXY";
@@ -127,13 +127,15 @@ public class HttpProxy extends HashMap<String,String> {
 		
 					
 					FileOutputStream apRequestLogger=null;  
-					
-					
-					String endpointFile = "Request"+requestCounter;
-					Log.i("Count","Request count "+requestCounter);
+				
 					requestCounter++;
+					
+					String endpointFile = "Request"+requestCounter+".txt";
+					Log.i("Count","Request count "+requestCounter);
+				
 					File sdCard = Environment.getExternalStorageDirectory();
 					File file = new File(sdCard.getAbsolutePath(), endpointFile);
+					file.delete();
 					apRequestLogger = new FileOutputStream(file);  
 					
 					
@@ -144,7 +146,7 @@ public class HttpProxy extends HashMap<String,String> {
 				//	StringBuilder headerBuilderBuffer = new StringBuilder(httpHeaderPrebufferSize);
 					
 				//	while (totalBytesRead<httpHeaderPrebufferSize){
-				
+					    Thread.sleep(10);
 						while (localhostRelayInputStream.available()>0){ 
 							
 							int bytesToRead = httpHeaderPrebufferSize-totalBytesRead;
@@ -180,6 +182,7 @@ public class HttpProxy extends HashMap<String,String> {
 					int statusLineBufferIndex;
 					for (statusLineBufferIndex = 0; statusLineBufferIndex < httpHeaderPrebufferSize; statusLineBufferIndex++){
 						headerScratchBuffer[statusLineBufferIndex] = buffer[statusLineBufferIndex];
+						
 						if (headerScratchBuffer[statusLineBufferIndex]==0x0A) {
 							break;
 						}
@@ -244,10 +247,18 @@ public class HttpProxy extends HashMap<String,String> {
 					 
 					//Here we have a chance to intercept the http headers in case we need to tweak something
 					for (int i = 0; i < currentHeaderIndex; i++){	
-						if (headers[i].contains("Host")){
-							headers[i] = "Host: "+apiServerHostName+":"+apiServerPort+"\r\n";
-						}
-					}
+						//if (headers[i].contains("Host")){
+						//	headers[i] = "Host: "+apiServerHostName+":"+apiServerPort+"\r\n";
+						//}
+						Log.i("faker","["+i+"] = "+headers[i]);
+						headers[i] = headers[i].replaceAll("localhost\\:"+localhostRelayPort, apiServerHostName+":"+apiServerPort);
+
+                        //if (headers[i].contains("Accept-Encoding")){
+                        //    Log.i("MARC","replacing "+headers[i]);
+                        //    headers[i] = "Accept-Encoding: text/plain \r\n";
+                        //    Log.i("MARC","with "+headers[i]);
+                        //}
+                    }
 					
 					if (enableLogging){
 						try {
@@ -257,6 +268,7 @@ public class HttpProxy extends HashMap<String,String> {
 							endpointFile = endpoint.replace("/", "_").replace("?", ".");
 							sdCard = Environment.getExternalStorageDirectory();
 							file = new File(sdCard.getAbsolutePath(), endpointFile);
+							file.delete();
 							apiDataLogger = new FileOutputStream(file);   
 							
 							
@@ -274,23 +286,45 @@ public class HttpProxy extends HashMap<String,String> {
 					InputStream apiServerInputStream = socketApiHost.getInputStream();
 					OutputStream apiServerOutputStream = socketApiHost.getOutputStream();
 					
+					
+					endpointFile = "Request-filtered"+requestCounter;
+					sdCard = Environment.getExternalStorageDirectory();
+					file = new File(sdCard.getAbsolutePath(), endpointFile);
+					file.delete();
+					FileOutputStream apFilteredRequestLogger = new FileOutputStream(file);  
+					
 					//Write the HTTP status line to the api server socket
 					apiServerOutputStream.write(statusLine.getBytes());
-				
+					apFilteredRequestLogger.write(statusLine.getBytes());
+					
+					
 					//Write the HTTP headers to the api server socket
 					for (int i = 0; i < currentHeaderIndex; i++){
 						apiServerOutputStream.write(headers[i].getBytes());
+						apFilteredRequestLogger.write(headers[i].getBytes());
 					}
 					apiServerOutputStream.write("\r\n".getBytes());
-					
+					apFilteredRequestLogger.write("\n\r".getBytes());
 					
 					//Write the remaining bits of data we pulled in the header buffer
 					if (numberOfBytesInBufferAfterHeaderBytes>0){
 						apiServerOutputStream.write(buffer,statusLineBufferIndex,numberOfBytesInBufferAfterHeaderBytes);
+						apFilteredRequestLogger.write(buffer,statusLineBufferIndex,numberOfBytesInBufferAfterHeaderBytes);
 					}
+
+                    //Just in case there was still data after we finished with the header buffer
+					int len;
+					if ((len = localhostRelayInputStream.available())>0){
+						byte[] buf = new byte[len];
+						localhostRelayInputStream.read(buf,0,len);
+						apiServerOutputStream.write(buf,0,len);
+						apRequestLogger.write(buf,0,len);
+					}
+					
 					
 					int zombiCount=0;
 			        boolean keepGoing=true;
+                    int totalApiBytesRead = 0;
 					while (keepGoing && zombiCount<20)
 					{
 			        	//To make sure that the thread does not spin endlessly doing nothing but eating battery and cpu
@@ -298,26 +332,18 @@ public class HttpProxy extends HashMap<String,String> {
 			        	zombiCount++;
 						while ((bytesRead = apiServerInputStream.available())>0 && keepGoing){ 
 							
-							//The http spec does not have the client sending bits to the server after the initial request, but maybe we want to anyhow
-							if (CONTINUE_SENDING_AFTER_REQUEST) {
-								int len;
-								if ((len = localhostRelayInputStream.available())>0){
-									byte[] buf = new byte[len];
-									localhostRelayInputStream.read(buf);
-									apiServerOutputStream.write(buf);
-									apRequestLogger.write(buf,0,len);
-								}
-							}
+						
 							zombiCount=0;
 							
 							//clip the bytes read to our max chunk size
 							if (bytesRead>maxBufferSizeForProxy){
 								bytesRead=maxBufferSizeForProxy;
 							}
-							apiServerInputStream.read(buffer,0,bytesRead);
-							
+							apiServerInputStream.read(buffer, 0, bytesRead);
+                            totalApiBytesRead += bytesRead;
+
 							if (apiDataLogger!=null){
-								apiDataLogger.write(buffer,0,bytesRead);
+								apiDataLogger.write(buffer, 0, bytesRead);
 							}
 							localhostRelayOutputStream.write(buffer,0,bytesRead);
 					
